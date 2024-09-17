@@ -60,23 +60,25 @@ contract CredentialTypeFactory {
         return credentialTypes;
     }
 
+    /// @notice Returns a specific credential type by its id
+    /// @dev Ensures the provided id is within the bounds of the `credentialTypes` array
+    /// @param _id The id of the credential type to retrieve
+    /// @return CredentialType struct corresponding to the provided id
+    function getCredentialType(
+        uint256 _id
+    ) external view validCredentiaTypelId(_id) returns (CredentialType memory) {
+        return credentialTypes[_id];
+    }
+
     /// @notice Creates a new credential type
     /// @dev The name must be valid and unique, otherwise the transaction reverts
     /// @param _name The name of the credential type to be created
     function createCredentialType(
         string memory _name
-    ) external validCredentialName(_name) {
+    ) external validCredentialTypeName(_name) {
         uint256 id = credentialTypes.length;
         credentialTypes.push(CredentialType(id, _name));
         emit CredentialTypeCreated(id, _name);
-    }
-
-    /// @notice Checks if a credential type exists by its id
-    /// @dev Ensures the provided id is within the bounds of the `credentialTypes` array
-    /// @param _id The id of the credential type
-    /// @return Boolean value indicating whether the credential type exists
-    function isCredentialType(uint256 _id) external view returns (bool) {
-        return _id < credentialTypes.length;
     }
 
     /// @notice Internal function to check if a credential name is already taken
@@ -109,7 +111,7 @@ contract CredentialTypeFactory {
     /// @notice Modifier to validate a credential name
     /// @dev Ensures the name is ASCII, unique, and within the maximum length
     /// @param _name The name to validate
-    modifier validCredentialName(string memory _name) {
+    modifier validCredentialTypeName(string memory _name) {
         bytes memory byteStr = bytes(_name);
         require(byteStr.length > 0, "Credential name cannot be empty");
         require(
@@ -118,6 +120,14 @@ contract CredentialTypeFactory {
         );
         require(_isAscii(byteStr), "Credential name must be ASCII");
         require(!_isNameTaken(_name), "Credential name must be unique");
+        _;
+    }
+
+    /// @notice Checks if a credential type exists
+    /// @dev Ensures the provided id is within the bounds of the `credentialTypes` array
+    /// @param _id The id of the credential type to check
+    modifier validCredentiaTypelId(uint256 _id) {
+        require(_id < credentialTypes.length, "Invalid credential type ID");
         _;
     }
 }

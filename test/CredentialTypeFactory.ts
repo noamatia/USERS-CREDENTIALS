@@ -4,47 +4,46 @@ import { CredentialTypeFactory } from "../typechain-types";
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 
 describe("CredentialTypeFactory", function () {
+  // Maximum length for credential type names
+  const MAX_NAME_LENGTH = 100;
+  // Define some sample credential type names
+  const CREDENTIAL_TYPE_NAMES = ["NBA Player", "NFL Player", "MLB Player"];
+
   /**
    * Deploys the CredentialTypeFactory contract.
    * @returns The contract instance, max name length, and credential type names.
    */
   async function deployCredentialTypeFactoryFixture() {
-    const maxNameLength = 100;
-    const credentialTypeNames: string[] = [
-      "NBA Player",
-      "NFL Player",
-      "MLB Player",
-    ];
+    // Deploy CredentialTypeFactory contract with the specified max name length
     const CredentialTypeFactory = await hre.ethers.getContractFactory(
       "CredentialTypeFactory"
     );
     const credentialTypeFactory = await CredentialTypeFactory.deploy(
-      maxNameLength
+      MAX_NAME_LENGTH
     );
-    return { credentialTypeFactory, maxNameLength, credentialTypeNames };
+
+    return { credentialTypeFactory };
   }
 
   /**
    * Helper function to create multiple credential types.
    * @param credentialTypeFactory - The deployed contract instance.
-   * @param credentialTypeNames - An array of credential type names to create.
    */
   async function createCredentialTypes(
-    credentialTypeFactory: CredentialTypeFactory,
-    credentialTypeNames: string[]
+    credentialTypeFactory: CredentialTypeFactory
   ) {
-    for (const credentialTypeName of credentialTypeNames) {
+    for (const credentialTypeName of CREDENTIAL_TYPE_NAMES) {
       await credentialTypeFactory.createCredentialType(credentialTypeName);
     }
   }
 
   describe("Deployment", function () {
     it("Should set the right maxNameLength", async function () {
-      const { credentialTypeFactory, maxNameLength } = await loadFixture(
+      const { credentialTypeFactory } = await loadFixture(
         deployCredentialTypeFactoryFixture
       );
       expect(await credentialTypeFactory.getMaxNameLength()).to.equal(
-        maxNameLength
+        MAX_NAME_LENGTH
       );
     });
 
@@ -69,22 +68,23 @@ describe("CredentialTypeFactory", function () {
     });
 
     it("Should return 1 if one credential type has been added", async function () {
-      const { credentialTypeFactory, credentialTypeNames } = await loadFixture(
+      const { credentialTypeFactory } = await loadFixture(
         deployCredentialTypeFactoryFixture
       );
-      await credentialTypeFactory.createCredentialType(credentialTypeNames[0]);
+      const [credentialTypeName] = CREDENTIAL_TYPE_NAMES;
+      await credentialTypeFactory.createCredentialType(credentialTypeName);
       expect(await credentialTypeFactory.getNumberOfCredentialTypes()).to.equal(
         1
       );
     });
 
     it("Should return n if n credential types have been added", async function () {
-      const { credentialTypeFactory, credentialTypeNames } = await loadFixture(
+      const { credentialTypeFactory } = await loadFixture(
         deployCredentialTypeFactoryFixture
       );
-      await createCredentialTypes(credentialTypeFactory, credentialTypeNames);
+      await createCredentialTypes(credentialTypeFactory);
       expect(await credentialTypeFactory.getNumberOfCredentialTypes()).to.equal(
-        credentialTypeNames.length
+        CREDENTIAL_TYPE_NAMES.length
       );
     });
 
@@ -92,60 +92,69 @@ describe("CredentialTypeFactory", function () {
       const { credentialTypeFactory } = await loadFixture(
         deployCredentialTypeFactoryFixture
       );
-      expect(await credentialTypeFactory.getCredentialTypes()).to.have.lengthOf(
-        0
-      );
+      expect(await credentialTypeFactory.getCredentialTypes()).to.be.empty;
     });
 
     it("Should return an array with one element if one credential type has been added", async function () {
-      const { credentialTypeFactory, credentialTypeNames } = await loadFixture(
+      const { credentialTypeFactory } = await loadFixture(
         deployCredentialTypeFactoryFixture
       );
-      await credentialTypeFactory.createCredentialType(credentialTypeNames[0]);
+      const [credentialTypeName] = CREDENTIAL_TYPE_NAMES;
+      await credentialTypeFactory.createCredentialType(credentialTypeName);
       const credentialTypes = await credentialTypeFactory.getCredentialTypes();
       expect(credentialTypes).to.have.lengthOf(1);
     });
 
     it("Should return an array with n elements if n credential types have been added", async function () {
-      const { credentialTypeFactory, credentialTypeNames } = await loadFixture(
+      const { credentialTypeFactory } = await loadFixture(
         deployCredentialTypeFactoryFixture
       );
-      await createCredentialTypes(credentialTypeFactory, credentialTypeNames);
+      await createCredentialTypes(credentialTypeFactory);
       const credentialTypes = await credentialTypeFactory.getCredentialTypes();
-      expect(credentialTypes).to.have.lengthOf(credentialTypeNames.length);
+      expect(credentialTypes).to.have.lengthOf(CREDENTIAL_TYPE_NAMES.length);
     });
 
     it("Should add 1 valid credential type", async function () {
-      const { credentialTypeFactory, credentialTypeNames } = await loadFixture(
+      const { credentialTypeFactory } = await loadFixture(
         deployCredentialTypeFactoryFixture
       );
-      await credentialTypeFactory.createCredentialType(credentialTypeNames[0]);
-      const credentialTypes = await credentialTypeFactory.getCredentialTypes();
-      expect(credentialTypes[0].id).to.equal(0);
-      expect(credentialTypes[0].name).to.equal(credentialTypeNames[0]);
+      const credentialTypeId = 0;
+      const [credentialTypeName] = CREDENTIAL_TYPE_NAMES;
+      await credentialTypeFactory.createCredentialType(credentialTypeName);
+      const credentialType = await credentialTypeFactory.getCredentialType(
+        credentialTypeId
+      );
+      expect(credentialType.id).to.equal(credentialTypeId);
+      expect(credentialType.name).to.equal(credentialTypeName);
     });
 
     it("Should add n valid credential types", async function () {
-      const { credentialTypeFactory, credentialTypeNames } = await loadFixture(
+      const { credentialTypeFactory } = await loadFixture(
         deployCredentialTypeFactoryFixture
       );
-      await createCredentialTypes(credentialTypeFactory, credentialTypeNames);
-      const credentialTypes = await credentialTypeFactory.getCredentialTypes();
-      for (let i = 0; i < credentialTypeNames.length; i++) {
-        expect(credentialTypes[i].id).to.equal(i);
-        expect(credentialTypes[i].name).to.equal(credentialTypeNames[i]);
+      await createCredentialTypes(credentialTypeFactory);
+      for (let i = 0; i < CREDENTIAL_TYPE_NAMES.length; i++) {
+        const credentialTypeId = i;
+        const credentialTypeName = CREDENTIAL_TYPE_NAMES[i];
+        const credentialType = await credentialTypeFactory.getCredentialType(
+          credentialTypeId
+        );
+        expect(credentialType.id).to.equal(credentialTypeId);
+        expect(credentialType.name).to.equal(credentialTypeName);
       }
     });
 
     it("Should emit the right event", async function () {
-      const { credentialTypeFactory, credentialTypeNames } = await loadFixture(
+      const { credentialTypeFactory } = await loadFixture(
         deployCredentialTypeFactoryFixture
       );
+      const credentialTypeId = 0;
+      const [credentialTypeName] = CREDENTIAL_TYPE_NAMES;
       await expect(
-        credentialTypeFactory.createCredentialType(credentialTypeNames[0])
+        credentialTypeFactory.createCredentialType(credentialTypeName)
       )
         .to.emit(credentialTypeFactory, "CredentialTypeCreated")
-        .withArgs(0, credentialTypeNames[0]);
+        .withArgs(credentialTypeId, credentialTypeName);
     });
   });
 
@@ -160,10 +169,10 @@ describe("CredentialTypeFactory", function () {
     });
 
     it("Should revert with the right error if the name is too long", async function () {
-      const { credentialTypeFactory, maxNameLength } = await loadFixture(
+      const { credentialTypeFactory } = await loadFixture(
         deployCredentialTypeFactoryFixture
       );
-      const longName = "a".repeat(maxNameLength + 1);
+      const longName = "a".repeat(MAX_NAME_LENGTH + 1);
       await expect(
         credentialTypeFactory.createCredentialType(longName)
       ).to.be.revertedWith("Credential name exceeds character limit");
@@ -179,36 +188,24 @@ describe("CredentialTypeFactory", function () {
     });
 
     it("Should revert with the right error if the name is already in use", async function () {
-      const { credentialTypeFactory, credentialTypeNames } = await loadFixture(
+      const { credentialTypeFactory } = await loadFixture(
         deployCredentialTypeFactoryFixture
       );
-      await credentialTypeFactory.createCredentialType(credentialTypeNames[0]);
+      const [credentialTypeName] = CREDENTIAL_TYPE_NAMES;
+      await credentialTypeFactory.createCredentialType(credentialTypeName);
       await expect(
-        credentialTypeFactory.createCredentialType(credentialTypeNames[0])
+        credentialTypeFactory.createCredentialType(credentialTypeName)
       ).to.be.revertedWith("Credential name must be unique");
     });
-  });
 
-  describe("Checking Credential Type Existence", function () {
-    it("Should return true if the credential type exists", async function () {
-      const { credentialTypeFactory, credentialTypeNames } = await loadFixture(
+    it("Should revert with the right error if the credential type does not exist", async function () {
+      const { credentialTypeFactory } = await loadFixture(
         deployCredentialTypeFactoryFixture
       );
-      await credentialTypeFactory.createCredentialType(credentialTypeNames[0]);
-      const credentialTypes = await credentialTypeFactory.getCredentialTypes();
-      expect(
-        await credentialTypeFactory.isCredentialType(credentialTypes[0].id)
-      ).to.be.true;
-    });
-
-    it("Should return false if the credential type does not exist", async function () {
-      const { credentialTypeFactory, credentialTypeNames } = await loadFixture(
-        deployCredentialTypeFactoryFixture
-      );
-      await createCredentialTypes(credentialTypeFactory, credentialTypeNames);
-      expect(
-        await credentialTypeFactory.isCredentialType(credentialTypeNames.length)
-      ).to.be.false;
+      await createCredentialTypes(credentialTypeFactory);
+      await expect(
+        credentialTypeFactory.getCredentialType(CREDENTIAL_TYPE_NAMES.length)
+      ).to.be.revertedWith("Invalid credential type ID");
     });
   });
 });
