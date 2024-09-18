@@ -1,6 +1,7 @@
 import hre from "hardhat";
 import { expect } from "chai";
 import { CredentialTypeFactory } from "../typechain-types";
+import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 
 describe("CredentialTypeFactory", function () {
@@ -154,7 +155,7 @@ describe("CredentialTypeFactory", function () {
         credentialTypeFactory.createCredentialType(credentialTypeName)
       )
         .to.emit(credentialTypeFactory, "CredentialTypeCreated")
-        .withArgs(credentialTypeId, credentialTypeName);
+        .withArgs(credentialTypeId, credentialTypeName, anyValue);
     });
   });
 
@@ -165,7 +166,7 @@ describe("CredentialTypeFactory", function () {
       );
       await expect(
         credentialTypeFactory.createCredentialType("")
-      ).to.be.revertedWith("Credential name cannot be empty");
+      ).to.be.revertedWith("Name exceeds character limit");
     });
 
     it("Should revert with the right error if the name is too long", async function () {
@@ -175,7 +176,7 @@ describe("CredentialTypeFactory", function () {
       const longName = "a".repeat(MAX_NAME_LENGTH + 1);
       await expect(
         credentialTypeFactory.createCredentialType(longName)
-      ).to.be.revertedWith("Credential name exceeds character limit");
+      ).to.be.revertedWith("Name exceeds character limit");
     });
 
     it("Should revert with the right error if the name contains non ASCII characters", async function () {
@@ -184,7 +185,7 @@ describe("CredentialTypeFactory", function () {
       );
       await expect(
         credentialTypeFactory.createCredentialType("🚀")
-      ).to.be.revertedWith("Credential name must be ASCII");
+      ).to.be.revertedWith("Name must be ASCII");
     });
 
     it("Should revert with the right error if the name is already in use", async function () {
@@ -195,7 +196,7 @@ describe("CredentialTypeFactory", function () {
       await credentialTypeFactory.createCredentialType(credentialTypeName);
       await expect(
         credentialTypeFactory.createCredentialType(credentialTypeName)
-      ).to.be.revertedWith("Credential name must be unique");
+      ).to.be.revertedWith("Name must be unique");
     });
 
     it("Should revert with the right error if the credential type does not exist", async function () {

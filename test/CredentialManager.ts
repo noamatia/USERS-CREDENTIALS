@@ -13,9 +13,13 @@ describe("CredentialManager", function () {
   /**
    * Deploys the credentialManager contract.
    * @param singleUser - Whether to deploy the contract with a single user.
+   * @param setMerkleRootByNonOwner - Whether to set the Merkle root by a non-owner.
    * @returns The contract instance, credentialTypeFactory address, Merkle tree, owner, and users.
    */
-  async function deployCredentialManagerFixture(singleUser = false) {
+  async function deployCredentialManagerFixture(
+    singleUser = false,
+    setMerkleRoot = true
+  ) {
     // Get signers for owner and test users
     const [owner, user1, user2, user3] = await hre.ethers.getSigners();
     const users = singleUser ? [user1] : [user1, user2, user3];
@@ -45,9 +49,12 @@ describe("CredentialManager", function () {
       "CredentialManager"
     );
     const credentialManager = await CredentialManager.deploy(
-      credentialTypeFactoryAddress,
-      merkleRoot
+      credentialTypeFactoryAddress
     );
+    await credentialManager.waitForDeployment();
+    if (setMerkleRoot) {
+      await credentialManager.setMerkleRoot(merkleRoot);
+    }
 
     return {
       credentialManager,
@@ -67,15 +74,21 @@ describe("CredentialManager", function () {
   }
 
   /**
+   * Deploys the credentialManager contract without a Merkle root.
+   * @returns The contract instance, credentialTypeFactory address, Merkle tree, owner, and users.
+   */
+  async function deployCredentialManagerFixtureNoMerkleRoot() {
+    return await deployCredentialManagerFixture(false, false);
+  }
+
+  /**
    * Helper function to create multiple credential types.
-   * @param credentialTypeFactory - The deployed contract instance.
+   * @param credentialManager - The deployed contract instance.
    * @param CREDENTIAL_TYPE_NAMES - An array of credential type names to create.
    */
-  async function createCredentialTypes(
-    credentialTypeFactory: CredentialManager
-  ) {
+  async function createCredentialTypes(credentialManager: CredentialManager) {
     for (const credentialTypeName of CREDENTIAL_TYPE_NAMES) {
-      await credentialTypeFactory.createCredentialType(credentialTypeName);
+      await credentialManager.createCredentialType(credentialTypeName);
     }
   }
 
@@ -86,6 +99,29 @@ describe("CredentialManager", function () {
       expect(
         await credentialManager.getCredentialTypeFactoryAddress()
       ).to.equal(credentialTypeFactoryAddress);
+    });
+  });
+
+  describe("Merkle Root Setting", function () {
+    it("Shoule revert if setting the Merkle root by a non-owner", async function () {
+      const { credentialManager, merkleTree, users } = await loadFixture(
+        deployCredentialManagerFixture
+      );
+      await expect(
+        credentialManager.connect(users[0]).setMerkleRoot(merkleTree.root)
+      ).to.be.revertedWithCustomError(
+        credentialManager,
+        "OwnableUnauthorizedAccount"
+      );
+    });
+
+    it("Should emit the MerkleRootUpdated event", async function () {
+      const { credentialManager, merkleTree } = await loadFixture(
+        deployCredentialManagerFixture
+      );
+      await expect(credentialManager.setMerkleRoot(merkleTree.root))
+        .to.emit(credentialManager, "MerkleRootUpdated")
+        .withArgs(merkleTree.root);
     });
   });
 
@@ -174,7 +210,7 @@ describe("CredentialManager", function () {
       );
       await expect(
         credentialManager.createCredentialType("")
-      ).to.be.revertedWith("Credential name cannot be empty");
+      ).to.be.revertedWith("Name exceeds character limit");
     });
 
     it("Should revert with the right error if the name is too long", async function () {
@@ -184,7 +220,7 @@ describe("CredentialManager", function () {
       const longName = "a".repeat(MAX_NAME_LENGTH + 1);
       await expect(
         credentialManager.createCredentialType(longName)
-      ).to.be.revertedWith("Credential name exceeds character limit");
+      ).to.be.revertedWith("Name exceeds character limit");
     });
 
     it("Should revert with the right error if the name contains non ASCII characters", async function () {
@@ -193,7 +229,7 @@ describe("CredentialManager", function () {
       );
       await expect(
         credentialManager.createCredentialType("🚀")
-      ).to.be.revertedWith("Credential name must be ASCII");
+      ).to.be.revertedWith("Name must be ASCII");
     });
 
     it("Should revert with the right error if the name is already in use", async function () {
@@ -204,7 +240,7 @@ describe("CredentialManager", function () {
       await credentialManager.createCredentialType(credentialTypeName);
       await expect(
         credentialManager.createCredentialType(credentialTypeName)
-      ).to.be.revertedWith("Credential name must be unique");
+      ).to.be.revertedWith("Name must be unique");
     });
 
     it("Should revert if a non-owner tries to create a credential type", async function () {
@@ -240,10 +276,9 @@ describe("CredentialManager", function () {
       const [credentialTypeName] = CREDENTIAL_TYPE_NAMES;
       await credentialManager.createCredentialType(credentialTypeName);
       await credentialManager.assignCredential(user.address, credentialTypeId);
-      const userCredentials = await credentialManager.getUserCredentialsTypes(
-        user.address
-      );
-      expect(userCredentials).to.have.lengthOf(1);
+      const userCredentialsTypes =
+        await credentialManager.getUserCredentialsTypes(user.address);
+      expect(userCredentialsTypes).to.have.lengthOf(1);
     });
 
     it("Should return an array with n elements if n credentials have been assigned", async function () {
@@ -259,10 +294,11 @@ describe("CredentialManager", function () {
           credentialTypeId
         );
       }
-      const userCredentials = await credentialManager.getUserCredentialsTypes(
-        user.address
+      const userCredentialsTypes =
+        await credentialManager.getUserCredentialsTypes(user.address);
+      expect(userCredentialsTypes).to.have.lengthOf(
+        CREDENTIAL_TYPE_NAMES.length
       );
-      expect(userCredentials).to.have.lengthOf(CREDENTIAL_TYPE_NAMES.length);
     });
 
     it("Should assign 1 valid user credential", async function () {
@@ -274,11 +310,10 @@ describe("CredentialManager", function () {
       const [credentialTypeName] = CREDENTIAL_TYPE_NAMES;
       await credentialManager.createCredentialType(credentialTypeName);
       await credentialManager.assignCredential(user.address, credentialTypeId);
-      const userCredentials = await credentialManager.getUserCredentialsTypes(
-        user.address
-      );
-      expect(userCredentials[0].id).to.equal(credentialTypeId);
-      expect(userCredentials[0].name).to.equal(credentialTypeName);
+      const userCredentialsTypes =
+        await credentialManager.getUserCredentialsTypes(user.address);
+      expect(userCredentialsTypes[0].id).to.equal(credentialTypeId);
+      expect(userCredentialsTypes[0].name).to.equal(credentialTypeName);
     });
 
     it("Should assign n valid user credentials", async function () {
@@ -290,10 +325,9 @@ describe("CredentialManager", function () {
       for (const value of values) {
         await credentialManager.assignCredential(value[0], value[1]);
       }
-      const userCredentials = await credentialManager.getUserCredentialsTypes(
-        users[0].address
-      );
-      for (const [i, userCredential] of userCredentials.entries()) {
+      const userCredentialsTypes =
+        await credentialManager.getUserCredentialsTypes(users[0].address);
+      for (const [i, userCredential] of userCredentialsTypes.entries()) {
         expect(userCredential.id).to.equal(i);
         expect(userCredential.name).to.equal(CREDENTIAL_TYPE_NAMES[i]);
       }
@@ -412,6 +446,24 @@ describe("CredentialManager", function () {
         );
         expect(isValid).to.be.true;
       }
+    });
+
+    it("Should return false if the merkle root has not been set", async function () {
+      const { credentialManager, users, merkleTree } = await loadFixture(
+        deployCredentialManagerFixtureNoMerkleRoot
+      );
+      const [user] = users;
+      const credentialTypeId = 0;
+      const [credentialTypeName] = CREDENTIAL_TYPE_NAMES;
+      const proof = merkleTree.getProof(credentialTypeId);
+      await credentialManager.createCredentialType(credentialTypeName);
+      await credentialManager.assignCredential(user.address, credentialTypeId);
+      const isValid = await credentialManager.verifyCredential(
+        user.address,
+        credentialTypeId.toString(),
+        proof
+      );
+      expect(isValid).to.be.false;
     });
   });
 });
