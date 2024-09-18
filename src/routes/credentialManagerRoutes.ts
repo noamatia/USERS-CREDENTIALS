@@ -1,24 +1,13 @@
 import { body, param } from "express-validator";
-import { Router, Request, Response } from "express";
-import { CredentialType } from "../models/credentialType";
-import {
-  getNumberOfCredentialTypes,
-  getCredentialTypes,
-  getUserCredentialsTypes,
-  createCredentialType,
-  assignCredential,
-  verifyCredential,
-} from "../controllers/credentialManagerController";
+import { Router, Request, Response, NextFunction } from "express";
+import { CredentialType } from "../services/credentialManagerService";
+import { validateRequest } from "../middlewares/validateRequestMiddleware";
+import * as credentialManagerController from "../controllers/credentialManagerController";
 
-// Define response interfaces
+// Define success response interfaces
 interface SuccessResponse<T> {
   success: true;
   data: T;
-}
-
-interface ErrorResponse {
-  success: false;
-  error: string;
 }
 
 // Interface for number of credential types response
@@ -52,6 +41,11 @@ interface CreationData {
   credentialTypeName: string;
 }
 
+// Helper function to validate Ethereum addresses
+const isEthereumAddress = (value: string) => {
+  return /^0x[a-fA-F0-9]{40}$/.test(value);
+};
+
 const router = Router();
 
 /**
@@ -62,10 +56,10 @@ const router = Router();
  */
 router.get(
   "/getNumberOfCredentialTypes",
-  async (req: Request, res: Response) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     try {
       const numberOfCredentialTypes: number =
-        await getNumberOfCredentialTypes();
+        await credentialManagerController.getNumberOfCredentialTypes();
       const response: SuccessResponse<NumberOfCredentialTypesData> = {
         success: true,
         data: {
@@ -74,12 +68,7 @@ router.get(
       };
       res.status(201).json(response);
     } catch (error) {
-      console.error("Error fetching credential types:", error);
-      const errorResponse: ErrorResponse = {
-        success: false,
-        error: "An internal error occurred while fetching credential types.",
-      };
-      res.status(500).json(errorResponse);
+      next(error);
     }
   }
 );
@@ -90,25 +79,24 @@ router.get(
  * @access Public
  * @returns {SuccessResponse<CredentialTypesData>} List of credential types
  */
-router.get("/getCredentialTypes", async (req: Request, res: Response) => {
-  try {
-    const credentialTypes: CredentialType[] = await getCredentialTypes();
-    const response: SuccessResponse<CredentialTypesData> = {
-      success: true,
-      data: {
-        credentialTypes,
-      },
-    };
-    res.status(201).json(response);
-  } catch (error) {
-    console.error("Error fetching credential types:", error);
-    const errorResponse: ErrorResponse = {
-      success: false,
-      error: "An internal error occurred while fetching credential types.",
-    };
-    res.status(500).json(errorResponse);
+router.get(
+  "/getCredentialTypes",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const credentialTypes: CredentialType[] =
+        await credentialManagerController.getCredentialTypes();
+      const response: SuccessResponse<CredentialTypesData> = {
+        success: true,
+        data: {
+          credentialTypes,
+        },
+      };
+      res.status(201).json(response);
+    } catch (error) {
+      next(error);
+    }
   }
-});
+);
 
 /**
  * @route GET /getUserCredentialsTypes/:userAddress
@@ -119,11 +107,17 @@ router.get("/getCredentialTypes", async (req: Request, res: Response) => {
  */
 router.get(
   "/getUserCredentialsTypes/:userAddress",
-  [param("userAddress").isString().withMessage("Invalid user address.")],
-  async (req: Request, res: Response) => {
+  [
+    param("userAddress")
+      .custom(isEthereumAddress)
+      .withMessage("Invalid Ethereum address"),
+    validateRequest,
+  ],
+  async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { userAddress } = req.params;
-      const userCredentialTypes = await getUserCredentialsTypes(userAddress);
+      const userCredentialTypes =
+        await credentialManagerController.getUserCredentialsTypes(userAddress);
       const response: SuccessResponse<UserCredentialTypesData> = {
         success: true,
         data: {
@@ -132,12 +126,7 @@ router.get(
       };
       res.status(201).json(response);
     } catch (error) {
-      console.error("Error fetching user credentials:", error);
-      const errorResponse: ErrorResponse = {
-        success: false,
-        error: "An internal error occurred while fetching user credentials.",
-      };
-      res.status(500).json(errorResponse);
+      next(error);
     }
   }
 );
@@ -152,14 +141,24 @@ router.get(
  */
 router.get(
   "/verifyCredential/:userAddress/:credentialTypeId",
-  async (req: Request, res: Response) => {
+  [
+    param("userAddress")
+      .custom(isEthereumAddress)
+      .withMessage("Invalid Ethereum address"),
+    param("credentialTypeId")
+      .isInt()
+      .withMessage("Invalid credential type ID."),
+    validateRequest,
+  ],
+  async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { userAddress } = req.params;
       const credentialTypeId = parseInt(req.params.credentialTypeId, 10); // Ensure correct type
-      const verificationStatus = await verifyCredential(
-        userAddress,
-        credentialTypeId
-      );
+      const verificationStatus =
+        await credentialManagerController.verifyCredential(
+          userAddress,
+          credentialTypeId
+        );
       const response: SuccessResponse<VerificationStatusData> = {
         success: true,
         data: {
@@ -168,12 +167,7 @@ router.get(
       };
       res.status(201).json(response);
     } catch (error) {
-      console.error("Error verifying credential:", error);
-      const errorResponse: ErrorResponse = {
-        success: false,
-        error: "An internal error occurred while verifying the credential.",
-      };
-      res.status(500).json(errorResponse);
+      next(error);
     }
   }
 );
@@ -191,11 +185,14 @@ router.post(
     body("credentialTypeName")
       .notEmpty()
       .withMessage("Credential type name is required."),
+    validateRequest,
   ],
-  async (req: Request, res: Response) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { credentialTypeName } = req.body;
-      await createCredentialType(credentialTypeName);
+      await credentialManagerController.createCredentialType(
+        credentialTypeName
+      );
       const response: SuccessResponse<CreationData> = {
         success: true,
         data: {
@@ -204,12 +201,7 @@ router.post(
       };
       res.status(201).json(response);
     } catch (error) {
-      console.error("Error creating credential type:", error);
-      const errorResponse: ErrorResponse = {
-        success: false,
-        error: "An internal error occurred while creating the credential type.",
-      };
-      res.status(500).json(errorResponse);
+      next(error);
     }
   }
 );
@@ -225,13 +217,19 @@ router.post(
 router.post(
   "/assignCredential",
   [
-    body("userAddress").isString().withMessage("Invalid user address."),
+    body("userAddress")
+      .custom(isEthereumAddress)
+      .withMessage("Invalid Ethereum address"),
     body("credentialTypeId").isInt().withMessage("Invalid credential type ID."),
+    validateRequest,
   ],
-  async (req: Request, res: Response) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { userAddress, credentialTypeId } = req.body;
-      await assignCredential(userAddress, credentialTypeId);
+      await credentialManagerController.assignCredential(
+        userAddress,
+        credentialTypeId
+      );
       const response: SuccessResponse<AssignmentData> = {
         success: true,
         data: {
@@ -241,12 +239,7 @@ router.post(
       };
       res.status(201).json(response);
     } catch (error) {
-      console.error("Error assigning credential:", error);
-      const errorResponse: ErrorResponse = {
-        success: false,
-        error: "An internal error occurred while assigning the credential.",
-      };
-      res.status(500).json(errorResponse);
+      next(error);
     }
   }
 );

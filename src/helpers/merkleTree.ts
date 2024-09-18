@@ -23,15 +23,23 @@ function loadMerkleTree(): StandardMerkleTree<string[]> | null {
 /**
  * Retrieves the Merkle proof for the specified credential type ID.
  * @param {number} credentialTypeId - The ID of the credential type for which the proof is needed.
- * @returns {string[]} The Merkle proof for the given credential type ID.
- * @throws {Error} If the Merkle tree is not initialized.
+ * @returns {string[]} The Merkle proof for the given credential type ID or an empty array if the proof is not found.
  */
-export function getProof(credentialTypeId: number): string[] {
+export function getProof(
+  userAddress: string,
+  credentialTypeId: number
+): string[] {
   const tree = loadMerkleTree();
   if (!tree) {
-    throw new Error("Merkle tree not initialized.");
+    return [];
   }
-  return tree.getProof(credentialTypeId);
+  try {
+    const proof = tree.getProof([userAddress, credentialTypeId.toString()]);
+    console.log("Merkle proof retrieved:", proof);
+    return proof;
+  } catch (error) {
+    return [];
+  }
 }
 
 /**

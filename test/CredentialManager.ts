@@ -387,7 +387,10 @@ describe("CredentialManager", function () {
       const [user] = users;
       const credentialTypeId = 0;
       const [credentialTypeName] = CREDENTIAL_TYPE_NAMES;
-      const proof = merkleTree.getProof(credentialTypeId);
+      const proof = merkleTree.getProof([
+        user.address,
+        credentialTypeId.toString(),
+      ]);
       await credentialManager.createCredentialType(credentialTypeName);
       const isValid = await credentialManager.verifyCredential(
         user.address,
@@ -413,7 +416,10 @@ describe("CredentialManager", function () {
       }
       for (let i = 0; i < CREDENTIAL_TYPE_NAMES.length; i++) {
         const credentialTypeId = i;
-        const proof = merkleTree.getProof(credentialTypeId);
+        const proof = merkleTree.getProof([
+          user.address,
+          credentialTypeId.toString(),
+        ]);
         const isValid = await credentialManager.verifyCredential(
           user.address,
           credentialTypeId.toString(),
@@ -438,7 +444,10 @@ describe("CredentialManager", function () {
       }
       for (let i = 0; i < CREDENTIAL_TYPE_NAMES.length; i++) {
         const credentialTypeId = i;
-        const proof = merkleTree.getProof(credentialTypeId);
+        const proof = merkleTree.getProof([
+          users[i].address,
+          credentialTypeId.toString(),
+        ]);
         const isValid = await credentialManager.verifyCredential(
           users[i].address,
           credentialTypeId.toString(),
@@ -455,7 +464,10 @@ describe("CredentialManager", function () {
       const [user] = users;
       const credentialTypeId = 0;
       const [credentialTypeName] = CREDENTIAL_TYPE_NAMES;
-      const proof = merkleTree.getProof(credentialTypeId);
+      const proof = merkleTree.getProof([
+        user.address,
+        credentialTypeId.toString(),
+      ]);
       await credentialManager.createCredentialType(credentialTypeName);
       await credentialManager.assignCredential(user.address, credentialTypeId);
       const isValid = await credentialManager.verifyCredential(
