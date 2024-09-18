@@ -35,8 +35,9 @@ export async function getOwnerAddress(): Promise<string> {
  */
 export async function getUsersAddresses(): Promise<string[]> {
   try {
-    const signers = await ethers.getSigners();
-    return signers.map((signer) => signer.address);
+    const provider = new ethers.JsonRpcProvider("http://localhost:8545");
+    const accounts = await provider.listAccounts();
+    return accounts.map((account) => account.address);
   } catch (error) {
     const decodedError: DecodedError = await errorDecoder.decode(error);
     throw new EthersServiceError(decodedError.reason);

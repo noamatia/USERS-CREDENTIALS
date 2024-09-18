@@ -4,11 +4,6 @@ import { ErrorDecoder } from "ethers-decode-error";
 import type { DecodedError } from "ethers-decode-error";
 import { CredentialManager } from "../../typechain-types";
 
-const deployeAddressesJson =
-  "ignition/deployments/chain-31337/deployed_addresses.json";
-let credentialManager: CredentialManager | undefined;
-const errorDecoder = ErrorDecoder.create();
-
 /**
  * Error class for the CredentialManager service.
  */
@@ -26,6 +21,9 @@ export interface CredentialType {
   name: string;
 }
 
+let credentialManager: CredentialManager;
+const errorDecoder = ErrorDecoder.create();
+
 /**
  * Gets an instance of the CredentialManager contract.
  * If the instance is not already initialized, it reads the deployed address
@@ -34,6 +32,9 @@ export interface CredentialType {
  */
 async function getCredentialManagerInstance(): Promise<CredentialManager> {
   if (!credentialManager) {
+    const chainId = (await ethers.provider.getNetwork()).chainId;
+    console.log(`Chain ID: ${chainId}`);
+    const deployeAddressesJson = `ignition/deployments/chain-${chainId}/deployed_addresses.json`;
     const deployedAddress: string = JSON.parse(
       fs.readFileSync(deployeAddressesJson, "utf8")
     )["CredentialManagerModule#CredentialManager"];
