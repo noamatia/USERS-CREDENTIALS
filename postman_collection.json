@@ -1,0 +1,215 @@
+{
+	"info": {
+		"_postman_id": "9f2b60f1-c925-4de7-8c73-e9de8dd129df",
+		"name": "User Credentials API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "15066326"
+	},
+	"item": [
+		{
+			"name": "Get Number of Credential Types",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:3000/api/getNumberOfCredentialTypes",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "3000",
+					"path": [
+						"api",
+						"getNumberOfCredentialTypes"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Credential Types",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:3000/api/getCredentialTypes",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "3000",
+					"path": [
+						"api",
+						"getCredentialTypes"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get User Credentials Types",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:3000/api/getUserCredentialsTypes/:userAddress",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "3000",
+					"path": [
+						"api",
+						"getUserCredentialsTypes",
+						":userAddress"
+					],
+					"variable": [
+						{
+							"key": "userAddress",
+							"value": ""
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Verify Credential",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:3000/api/verifyCredential/:userAddress/:credentialTypeId",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "3000",
+					"path": [
+						"api",
+						"verifyCredential",
+						":userAddress",
+						":credentialTypeId"
+					],
+					"variable": [
+						{
+							"key": "userAddress",
+							"value": ""
+						},
+						{
+							"key": "credentialTypeId",
+							"value": ""
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Create Credential Type",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"credentialTypeName\": \"NBA Player\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:3000/api/createCredentialType",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "3000",
+					"path": [
+						"api",
+						"createCredentialType"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Assign Credential",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"userAddress\": \"\",\n    \"credentialTypeId\": 0\n}"
+				},
+				"url": {
+					"raw": "http://localhost:3000/api/assignCredential",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "3000",
+					"path": [
+						"api",
+						"assignCredential"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Owner Address",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:3000/api/getOwnerAddress",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "3000",
+					"path": [
+						"api",
+						"getOwnerAddress"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Users Addresses",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:3000/api/getUsersAddresses",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "3000",
+					"path": [
+						"api",
+						"getUsersAddresses"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get User Balance",
+			"request": {
+				"method": "GET",
+				"header": []
+			},
+			"response": []
+		}
+	]
+}
